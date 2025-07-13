@@ -1,0 +1,11 @@
+# Ignore environment variables
+.env
+
+# Ignore node modules
+node_modules/
+
+# Ignore log files
+*.log
+
+# Ignore OS-specific or IDE-specific files
+.DS_Store
