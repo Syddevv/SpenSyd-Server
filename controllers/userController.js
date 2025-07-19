@@ -75,4 +75,7 @@ export const loginUser = async (req, res) => {
   }
 };
 
-export const verifyUser = async (req, res) => {};
+// Verify User
+export const verifyUser = async (req, res) => {
+  return res.status(200).json({ success: true, user: req.user });
+};
