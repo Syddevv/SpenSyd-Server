@@ -3,6 +3,7 @@ import connectToDb from "./db/db.js";
 import cors from "cors";
 import dotenv from "dotenv";
 import authRouter from "./routes/authRoutes.js";
+import expenseRouter from "./routes/expensesRoutes.js";
 
 dotenv.config();
 
@@ -13,6 +14,7 @@ app.use(cors());
 app.use(express.json());
 
 app.use("/api/auth", authRouter);
+app.use("/api/expense", expenseRouter);
 
 app.listen(PORT, () => {
   connectToDb();

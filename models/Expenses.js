@@ -7,4 +7,5 @@ const expenseSchema = new mongoose.Schema({
   date: { type: Date, default: Date.now },
 });
 
-export default mongoose.model("Expense", expenseSchema);
+const ExpenseModel = mongoose.model("Expense", expenseSchema);
+export default ExpenseModel;
