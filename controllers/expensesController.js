@@ -24,5 +24,23 @@ export const addExpense = async (req, res) => {
     });
   } catch (error) {
     console.log("Server error during submission of expense:", error.message);
+    return res.status(500).json({
+      success: false,
+      message: "Server error during submission of expense",
+    });
+  }
+};
+
+// Fetch Expense
+export const fetchExpense = async (req, res) => {
+  try {
+    const expenses = await ExpenseModel.find({ userId: req.user.id });
+    return res.status(200).json({ success: true, expenses });
+  } catch (error) {
+    console.log("Server error during fetching expenses:", error.message);
+    return res.status(500).json({
+      success: false,
+      message: "Server error during fetching of expense",
+    });
   }
 };

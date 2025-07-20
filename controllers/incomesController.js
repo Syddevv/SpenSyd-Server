@@ -26,3 +26,18 @@ export const addBalance = async (req, res) => {
     console.log("Server error during submission of balance:", error.message);
   }
 };
+
+export const fetchBalance = async (req, res) => {
+  try {
+    const balances = await IncomeModel.find({ userId: req.user.id });
+    return res.status(200).json({ success: true, balances });
+  } catch (error) {
+    console.log("Server error during fetching balances:", error.message);
+    return res
+      .status(500)
+      .json({
+        success: false,
+        message: "Server error during fetching balances",
+      });
+  }
+};
