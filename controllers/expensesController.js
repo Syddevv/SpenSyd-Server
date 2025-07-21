@@ -13,6 +13,7 @@ export const addExpense = async (req, res) => {
     const newExpense = new ExpenseModel({
       ...expense,
       userId: req.user.id,
+      createdAt: new Date(expense.date),
     });
 
     await newExpense.save();

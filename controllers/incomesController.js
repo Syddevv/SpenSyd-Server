@@ -13,6 +13,7 @@ export const addBalance = async (req, res) => {
     const newBalance = new IncomeModel({
       ...balance,
       userId: req.user.id,
+      createdAt: new Date(balance.date),
     });
 
     await newBalance.save();
