@@ -29,15 +29,16 @@ export const addBalance = async (req, res) => {
 
 export const fetchBalance = async (req, res) => {
   try {
-    const balances = await IncomeModel.find({ userId: req.user.id });
+    const balances = await IncomeModel.find({ userId: req.user.id })
+      .select("category amount date createdAt")
+      .sort({ createdAt: -1 });
+
     return res.status(200).json({ success: true, balances });
   } catch (error) {
     console.log("Server error during fetching balances:", error.message);
-    return res
-      .status(500)
-      .json({
-        success: false,
-        message: "Server error during fetching balances",
-      });
+    return res.status(500).json({
+      success: false,
+      message: "Server error during fetching balances",
+    });
   }
 };

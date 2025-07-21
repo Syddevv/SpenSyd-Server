@@ -34,7 +34,9 @@ export const addExpense = async (req, res) => {
 // Fetch Expense
 export const fetchExpense = async (req, res) => {
   try {
-    const expenses = await ExpenseModel.find({ userId: req.user.id });
+    const expenses = await ExpenseModel.find({ userId: req.user.id }).sort({
+      createdAt: -1,
+    });
     return res.status(200).json({ success: true, expenses });
   } catch (error) {
     console.log("Server error during fetching expenses:", error.message);
