@@ -10,10 +10,12 @@ export const addBalance = async (req, res) => {
         .json({ success: false, message: "Balance is Required" });
     }
 
+    const month = new Date().getMonth();
     const newBalance = new IncomeModel({
       ...balance,
       userId: req.user.id,
       createdAt: new Date(balance.date),
+      month,
     });
 
     await newBalance.save();
