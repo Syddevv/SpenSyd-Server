@@ -10,10 +10,12 @@ export const addExpense = async (req, res) => {
         .json({ success: false, message: "Expense is Required" });
     }
 
+    const month = new Date().getMonth();
     const newExpense = new ExpenseModel({
       ...expense,
       userId: req.user.id,
       createdAt: new Date(expense.date),
+      month,
     });
 
     await newExpense.save();

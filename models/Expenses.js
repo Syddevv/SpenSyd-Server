@@ -10,6 +10,7 @@ const expenseSchema = new mongoose.Schema(
     category: { type: String, required: true },
     amount: { type: Number, required: true },
     date: { type: Date, default: Date.now },
+    month: String,
   },
   {
     timestamps: true,
