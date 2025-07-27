@@ -1,6 +1,9 @@
-// Temporary in-memory storage (for demo only, use Redis/db in prod)
 const tempUsers = {};
 
+import cloudinary from "../utils/cloudinary.js";
+import multer from "multer";
+import path from "path";
+import { v4 as uuidv4 } from "uuid";
 import User from "../models/User.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
@@ -16,6 +19,22 @@ const transporter = nodemailer.createTransport({
     pass: process.env.EMAIL_PASS,
   },
 });
+
+const storage = multer.diskStorage({
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname);
+    cb(null, uuidv4() + ext);
+  },
+});
+
+const fileFilter = (req, file, cb) => {
+  const allowed = /jpeg|jpg|png|gif/;
+  const extValid = allowed.test(path.extname(file.originalname).toLowerCase());
+  if (extValid) cb(null, true);
+  else cb(new Error("Only image files allowed"));
+};
+
+export const upload = multer({ storage, fileFilter });
 
 export const sendVerificationCode = async (req, res) => {
   try {
@@ -152,7 +171,7 @@ export const loginUser = async (req, res) => {
       success: true,
       token,
       user: {
-        id: user._id,
+        _id: user._id, // <-- change 'id' to '_id'
         username: user.username,
         email: user.email,
       },
@@ -166,4 +185,62 @@ export const loginUser = async (req, res) => {
 
 export const verifyUser = async (req, res) => {
   return res.status(200).json({ success: true, user: req.user });
+};
+
+export const updateUserProfile = async (req, res) => {
+  try {
+    const userId = req.params.id;
+    const user = await User.findById(userId);
+
+    if (!user) {
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found" });
+    }
+
+    // If image file was uploaded
+    if (req.file) {
+      try {
+        const result = await cloudinary.uploader.upload(req.file.path, {
+          folder: "profilePics",
+        });
+        user.profilePicture = result.secure_url;
+      } catch (cloudErr) {
+        console.error("Cloudinary upload failed:", cloudErr);
+        return res.status(500).json({
+          success: false,
+          message: "Image upload failed",
+          error: cloudErr.message,
+        });
+      }
+    }
+
+    // If username is changed
+    if (req.body.username) {
+      user.username = req.body.username;
+    }
+
+    await user.save();
+    return res
+      .status(200)
+      .json({ success: true, message: "Profile updated", user });
+  } catch (error) {
+    console.error("Error in updateUserProfile:", error);
+    return res
+      .status(500)
+      .json({ success: false, message: "Server error", error: error.message });
+  }
+};
+
+export const getUserProfile = async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id).select(
+      "username email profilePicture"
+    );
+    return res.status(200).json({ success: true, user });
+  } catch (err) {
+    return res
+      .status(500)
+      .json({ success: false, message: "Cannot fetch user" });
+  }
 };

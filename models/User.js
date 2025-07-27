@@ -1,3 +1,4 @@
+// Updated User.js
 import mongoose from "mongoose";
 
 const UserSchema = new mongoose.Schema(
@@ -9,11 +10,11 @@ const UserSchema = new mongoose.Schema(
       unique: true,
       trim: true,
     },
-
     password: { type: String, required: true },
     isVerified: { type: Boolean, default: false },
     verificationCode: { type: String },
     codeExpires: { type: Date },
+    profilePicture: { type: String, default: "" },
   },
   { timestamps: true }
 );
