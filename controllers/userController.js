@@ -187,7 +187,17 @@ export const loginUser = async (req, res) => {
 };
 
 export const verifyUser = async (req, res) => {
-  return res.status(200).json({ success: true, user: req.user });
+  const user = await User.findById(req.user.id);
+  if (!user) return res.status(404).json({ success: false });
+  res.json({
+    success: true,
+    user: {
+      username: user.username,
+      email: user.email,
+      profilePicture: user.profilePicture, // <-- this must be included
+      // ...other fields
+    },
+  });
 };
 
 export const updateUserProfile = async (req, res) => {
@@ -288,6 +298,13 @@ export const changePassword = async (req, res) => {
 export const sendResetCode = async (req, res) => {
   const { email } = req.body;
 
+  const user = await User.findOne({ email });
+  if (!user) {
+    return res.status(400).json({
+      success: false,
+      message: "No account is connected to this email.",
+    });
+  }
   try {
     const user = await User.findOne({ email });
     if (!user) {
@@ -502,4 +519,50 @@ export const verifyNewEmailCodeAndUpdate = async (req, res) => {
     message: "Email updated successfully",
     newEmail: user.email,
   });
+};
+
+// In authController.js
+export const sendResetCodeLoggedIn = async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found" });
+    }
+
+    // Verify the provided email matches the logged-in user's email
+    if (user.email !== req.body.email) {
+      return res.status(400).json({
+        success: false,
+        message: "Email doesn't match your account",
+      });
+    }
+
+    const verificationCode = Math.floor(
+      100000 + Math.random() * 900000
+    ).toString();
+    const codeExpires = new Date(Date.now() + 15 * 60 * 1000); // 15 mins
+
+    // Store code temporarily
+    tempUsers[user.email] = {
+      resetCode: verificationCode,
+      codeExpires,
+    };
+
+    await transporter.sendMail({
+      from: `"SpenSyd" <${process.env.EMAIL_USER}>`,
+      to: user.email,
+      subject: "SpenSyd Password Reset Code",
+      text: `Hi ${user.username},\n\nYou requested to reset your SpenSyd password. Use the code below:\n\n🔐 Code: ${verificationCode}\n\nThis code will expire in 15 minutes.\n\nIf you didn't request this, you can ignore this email.\n\n– SpenSyd Team`,
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "Reset code sent to email",
+    });
+  } catch (error) {
+    console.error("sendResetCodeLoggedIn error:", error);
+    return res.status(500).json({ success: false, message: "Server error" });
+  }
 };

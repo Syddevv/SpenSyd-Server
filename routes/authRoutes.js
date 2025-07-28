@@ -7,7 +7,8 @@ import {
   updateUserProfile,
   getUserProfile,
   changePassword,
-  sendResetCode, // ✅ Forgot password only
+  sendResetCode, // ✅ Forgot password (not logged in)
+  sendResetCodeLoggedIn, // ✅ Forgot password (logged in)
   verifyResetCode,
   resetPassword,
   sendCurrentEmailCode,
@@ -21,15 +22,15 @@ import { verifyToken, protect } from "../middlewares/middleware.js";
 
 const router = express.Router();
 
-// ✅ AUTHENTICATION ROUTES
+// ==================== AUTHENTICATION ROUTES ====================
 router.post("/login", loginUser);
 router.get("/verify", verifyToken, verifyUser);
 
-// ✅ REGISTRATION: Verify Email Code (for new accounts)
+// ==================== REGISTRATION ROUTES ====================
 router.post("/verify-email", verifyEmail);
-router.post("/send-code", sendVerificationCode); // 🚨 ONLY for new user signup
+router.post("/send-code", sendVerificationCode); // Only for new user signup
 
-// ✅ PROFILE
+// ==================== PROFILE ROUTES ====================
 router.get("/me", verifyToken, getUserProfile);
 router.put(
   "/updateProfile/:id",
@@ -38,15 +39,17 @@ router.put(
   updateUserProfile
 );
 
-// ✅ PASSWORD
+// ==================== PASSWORD ROUTES ====================
+// Change password (knows current password)
 router.put("/change-password", protect, changePassword);
 
-// ✅ FORGOT PASSWORD FLOW
-router.post("/send-reset-code", sendResetCode); // Sends code to existing email
-router.post("/verify-reset-code", verifyResetCode); // Verifies reset code
-router.post("/reset-password", resetPassword); // Resets password
+// Forgot password flows
+router.post("/send-reset-code", sendResetCode); // Not logged in
+router.post("/send-reset-code/logged-in", verifyToken, sendResetCodeLoggedIn); // Logged in
+router.post("/verify-reset-code", verifyResetCode); // Common verification
+router.post("/reset-password", resetPassword); // Common reset
 
-// Change Email Flow
+// ==================== EMAIL CHANGE ROUTES ====================
 router.post(
   "/change-email/send-current-code",
   verifyToken,
