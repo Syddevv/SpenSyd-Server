@@ -10,6 +10,10 @@ import {
   sendResetCode, // ✅ Forgot password only
   verifyResetCode,
   resetPassword,
+  sendCurrentEmailCode,
+  verifyCurrentEmailCode,
+  sendNewEmailCode,
+  verifyNewEmailCodeAndUpdate,
 } from "../controllers/userController.js";
 
 import upload from "../middlewares/multer.js";
@@ -41,5 +45,23 @@ router.put("/change-password", protect, changePassword);
 router.post("/send-reset-code", sendResetCode); // Sends code to existing email
 router.post("/verify-reset-code", verifyResetCode); // Verifies reset code
 router.post("/reset-password", resetPassword); // Resets password
+
+// Change Email Flow
+router.post(
+  "/change-email/send-current-code",
+  verifyToken,
+  sendCurrentEmailCode
+);
+router.post(
+  "/change-email/verify-current-code",
+  verifyToken,
+  verifyCurrentEmailCode
+);
+router.post("/change-email/send-new-code", verifyToken, sendNewEmailCode);
+router.post(
+  "/change-email/verify-new-code",
+  verifyToken,
+  verifyNewEmailCodeAndUpdate
+);
 
 export default router;

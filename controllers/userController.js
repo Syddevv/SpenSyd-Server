@@ -1,5 +1,8 @@
 const tempUsers = {};
 
+// Store change email flows: { userId: { step, currentEmailCode, newEmail, newEmailCode, expires } }
+const tempChangeEmail = {};
+
 import cloudinary from "../utils/cloudinary.js";
 import multer from "multer";
 import path from "path";
@@ -379,4 +382,124 @@ export const resetPassword = async (req, res) => {
     console.error("resetPassword error:", error);
     return res.status(500).json({ success: false, message: "Server error" });
   }
+};
+
+// Step 1: Send code to current email
+export const sendCurrentEmailCode = async (req, res) => {
+  const userId = req.user.id;
+  const user = await User.findById(userId);
+  if (!user)
+    return res.status(404).json({ success: false, message: "User not found" });
+
+  const code = Math.floor(100000 + Math.random() * 900000).toString();
+  const expires = Date.now() + 15 * 60 * 1000;
+
+  tempChangeEmail[userId] = { step: 1, currentEmailCode: code, expires };
+
+  await transporter.sendMail({
+    from: `"SpenSyd" <${process.env.EMAIL_USER}>`,
+    to: user.email,
+    subject: "Verify your current email",
+    text: `Your code: ${code}\n\nThis code expires in 15 minutes.`,
+  });
+
+  return res.json({
+    success: true,
+    message: "Verification code sent to current email.",
+  });
+};
+
+// Step 2: Verify code from current email
+export const verifyCurrentEmailCode = (req, res) => {
+  const userId = req.user.id;
+  const { code } = req.body;
+  const entry = tempChangeEmail[userId];
+  if (!entry || entry.step !== 1 || entry.currentEmailCode !== code)
+    return res.status(400).json({ success: false, message: "Invalid code" });
+  if (entry.expires < Date.now()) {
+    delete tempChangeEmail[userId];
+    return res.status(400).json({ success: false, message: "Code expired" });
+  }
+  entry.step = 2;
+  return res.json({ success: true, message: "Current email verified" });
+};
+
+// Step 3: Send code to new email
+export const sendNewEmailCode = async (req, res) => {
+  const userId = req.user.id;
+  const { newEmail } = req.body;
+  const entry = tempChangeEmail[userId];
+  if (!entry || entry.step !== 2)
+    return res
+      .status(400)
+      .json({ success: false, message: "Unauthorized flow" });
+
+  // Check if new email is already used
+  const exists = await User.findOne({ email: newEmail });
+  if (exists)
+    return res
+      .status(400)
+      .json({ success: false, message: "Email already in use" });
+
+  const code = Math.floor(100000 + Math.random() * 900000).toString();
+  const expires = Date.now() + 15 * 60 * 1000;
+
+  entry.newEmail = newEmail;
+  entry.newEmailCode = code;
+  entry.newEmailExpires = expires;
+  entry.step = 3;
+
+  await transporter.sendMail({
+    from: `"SpenSyd" <${process.env.EMAIL_USER}>`,
+    to: newEmail,
+    subject: "Verify your new email",
+    text: `Your code: ${code}\n\nThis code expires in 15 minutes.`,
+  });
+
+  return res.json({
+    success: true,
+    message: "Verification code sent to new email.",
+  });
+};
+
+// Step 4: Verify code from new email and update
+export const verifyNewEmailCodeAndUpdate = async (req, res) => {
+  const userId = req.user.id;
+  const { code } = req.body;
+  const entry = tempChangeEmail[userId];
+  if (!entry || entry.step !== 3 || entry.newEmailCode !== code)
+    return res.status(400).json({ success: false, message: "Invalid code" });
+  if (entry.newEmailExpires < Date.now()) {
+    delete tempChangeEmail[userId];
+    return res.status(400).json({ success: false, message: "Code expired" });
+  }
+
+  const user = await User.findById(userId);
+  if (!user)
+    return res.status(404).json({ success: false, message: "User not found" });
+
+  const oldEmail = user.email;
+  user.email = entry.newEmail;
+  await user.save();
+
+  // Notify both emails
+  await transporter.sendMail({
+    from: `"SpenSyd" <${process.env.EMAIL_USER}>`,
+    to: oldEmail,
+    subject: "Your email was changed",
+    text: `Your SpenSyd email was changed to ${entry.newEmail}. If this wasn't you, contact support.`,
+  });
+  await transporter.sendMail({
+    from: `"SpenSyd" <${process.env.EMAIL_USER}>`,
+    to: entry.newEmail,
+    subject: "Welcome to your new email",
+    text: `Your SpenSyd email has been updated successfully.`,
+  });
+
+  delete tempChangeEmail[userId];
+  return res.json({
+    success: true,
+    message: "Email updated successfully",
+    newEmail: user.email,
+  });
 };
