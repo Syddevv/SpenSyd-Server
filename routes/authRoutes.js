@@ -6,24 +6,26 @@ import {
   sendVerificationCode,
   updateUserProfile,
   getUserProfile,
+  changePassword,
 } from "../controllers/userController.js";
-import middleware from "../middlewares/middleware.js";
 import upload from "../middlewares/multer.js"; // ✅ Use your custom multer config
+import { verifyToken, protect } from "../middlewares/middleware.js";
 
 const router = express.Router();
 
 router.post("/login", loginUser);
-router.get("/verify", middleware, verifyUser);
+router.get("/verify", verifyToken, verifyUser);
 router.post("/verify-email", verifyEmail);
 router.post("/send-code", sendVerificationCode);
 
 router.put(
   "/updateProfile/:id",
-  middleware,
+  verifyToken,
   upload.single("profilePicture"), // ✅ Proper file upload middleware
   updateUserProfile
 );
 
-router.get("/me", middleware, getUserProfile);
+router.get("/me", verifyToken, getUserProfile);
+router.put("/change-password", protect, changePassword);
 
 export default router;

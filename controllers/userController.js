@@ -244,3 +244,40 @@ export const getUserProfile = async (req, res) => {
       .json({ success: false, message: "Cannot fetch user" });
   }
 };
+
+export const changePassword = async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+    const user = await User.findById(req.user.id); // From auth middleware
+
+    const isMatch = await bcrypt.compare(currentPassword, user.password);
+    if (!isMatch) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Current password is incorrect" });
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(newPassword, salt);
+    user.password = hashedPassword;
+    await user.save();
+
+    // Send email notification
+    await transporter.sendMail({
+      from: `"SpenSyd" <${process.env.EMAIL_USER}>`,
+      to: user.email,
+      subject: "Your Password Was Changed",
+      text: `Hello ${user.username},\n\nThis is a confirmation that your password was successfully changed.\n\nIf this wasn't you, please contact us immediately.\n\n– SpenSyd Team`,
+    });
+
+    return res
+      .status(200)
+      .json({ success: true, message: "Password updated successfully" });
+  } catch (error) {
+    console.error("Change password error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to update password",
+    });
+  }
+};
