@@ -281,3 +281,102 @@ export const changePassword = async (req, res) => {
     });
   }
 };
+
+export const sendResetCode = async (req, res) => {
+  const { email } = req.body;
+
+  try {
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Email not found" });
+    }
+
+    const verificationCode = Math.floor(
+      100000 + Math.random() * 900000
+    ).toString();
+    const codeExpires = new Date(Date.now() + 15 * 60 * 1000); // 15 mins
+
+    // Store code temporarily
+    tempUsers[email] = {
+      resetCode: verificationCode,
+      codeExpires,
+    };
+
+    await transporter.sendMail({
+      from: `"SpenSyd" <${process.env.EMAIL_USER}>`,
+      to: email,
+      subject: "SpenSyd Password Reset Code",
+      text: `Hi ${user.username},\n\nYou requested to reset your SpenSyd password. Use the code below:\n\n🔐 Code: ${verificationCode}\n\nThis code will expire in 15 minutes.\n\nIf you didn’t request this, you can ignore this email.\n\n– SpenSyd Team`,
+    });
+
+    return res
+      .status(200)
+      .json({ success: true, message: "Reset code sent to email" });
+  } catch (error) {
+    console.error("sendResetCode error:", error);
+    return res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
+export const verifyResetCode = async (req, res) => {
+  const { email, code } = req.body;
+  const entry = tempUsers[email];
+
+  try {
+    if (!entry || entry.resetCode !== code) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid verification code" });
+    }
+
+    if (entry.codeExpires < Date.now()) {
+      delete tempUsers[email];
+      return res
+        .status(400)
+        .json({ success: false, message: "Verification code expired" });
+    }
+
+    return res.status(200).json({ success: true, message: "Code verified" });
+  } catch (error) {
+    console.error("verifyResetCode error:", error);
+    return res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
+export const resetPassword = async (req, res) => {
+  const { email, newPassword } = req.body;
+
+  try {
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found" });
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(newPassword, salt);
+    user.password = hashedPassword;
+    await user.save();
+
+    // Remove from temp store
+    delete tempUsers[email];
+
+    // Send email
+    await transporter.sendMail({
+      from: `"SpenSyd" <${process.env.EMAIL_USER}>`,
+      to: user.email,
+      subject: "Your SpenSyd Password Was Changed",
+      text: `Hi ${user.username},\n\nThis is a confirmation that your password has been successfully reset.\n\nIf you didn’t request this, please contact us immediately.\n\n– SpenSyd Team`,
+    });
+
+    return res
+      .status(200)
+      .json({ success: true, message: "Password reset successfully" });
+  } catch (error) {
+    console.error("resetPassword error:", error);
+    return res.status(500).json({ success: false, message: "Server error" });
+  }
+};
