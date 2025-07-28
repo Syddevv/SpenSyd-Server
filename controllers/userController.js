@@ -340,27 +340,56 @@ export const sendResetCode = async (req, res) => {
   }
 };
 
+// In your authController.js
 export const verifyResetCode = async (req, res) => {
-  const { email, code } = req.body;
-  const entry = tempUsers[email];
-
   try {
-    if (!entry || entry.resetCode !== code) {
-      return res
-        .status(400)
-        .json({ success: false, message: "Invalid verification code" });
+    const { email, code } = req.body;
+
+    // Normalize email case
+    const normalizedEmail = email.toLowerCase();
+    const entry = tempUsers[normalizedEmail];
+
+    console.log("Verification attempt for:", normalizedEmail);
+    console.log("Stored entry:", entry);
+    console.log("Submitted code:", code);
+
+    if (!entry) {
+      return res.status(400).json({
+        success: false,
+        message: "No active verification request found",
+      });
     }
 
     if (entry.codeExpires < Date.now()) {
-      delete tempUsers[email];
-      return res
-        .status(400)
-        .json({ success: false, message: "Verification code expired" });
+      delete tempUsers[normalizedEmail];
+      return res.status(400).json({
+        success: false,
+        message: "Verification code has expired",
+      });
     }
 
-    return res.status(200).json({ success: true, message: "Code verified" });
+    if (entry.resetCode !== code) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid verification code",
+      });
+    }
+
+    // Code is valid - create a verification token
+    const verificationToken = jwt.sign(
+      { email: normalizedEmail, verified: true },
+      process.env.JWT_SECRET,
+      { expiresIn: "15m" }
+    );
+
+    delete tempUsers[normalizedEmail]; // Prevent code reuse
+
+    return res.status(200).json({
+      success: true,
+      token: verificationToken,
+    });
   } catch (error) {
-    console.error("verifyResetCode error:", error);
+    console.error("Verification error:", error);
     return res.status(500).json({ success: false, message: "Server error" });
   }
 };
@@ -531,20 +560,12 @@ export const sendResetCodeLoggedIn = async (req, res) => {
         .json({ success: false, message: "User not found" });
     }
 
-    // Verify the provided email matches the logged-in user's email
-    if (user.email !== req.body.email) {
-      return res.status(400).json({
-        success: false,
-        message: "Email doesn't match your account",
-      });
-    }
-
+    // No need to check email since we're using the logged-in user's email
     const verificationCode = Math.floor(
       100000 + Math.random() * 900000
     ).toString();
     const codeExpires = new Date(Date.now() + 15 * 60 * 1000); // 15 mins
 
-    // Store code temporarily
     tempUsers[user.email] = {
       resetCode: verificationCode,
       codeExpires,
@@ -557,10 +578,9 @@ export const sendResetCodeLoggedIn = async (req, res) => {
       text: `Hi ${user.username},\n\nYou requested to reset your SpenSyd password. Use the code below:\n\n🔐 Code: ${verificationCode}\n\nThis code will expire in 15 minutes.\n\nIf you didn't request this, you can ignore this email.\n\n– SpenSyd Team`,
     });
 
-    return res.status(200).json({
-      success: true,
-      message: "Reset code sent to email",
-    });
+    return res
+      .status(200)
+      .json({ success: true, message: "Reset code sent to email" });
   } catch (error) {
     console.error("sendResetCodeLoggedIn error:", error);
     return res.status(500).json({ success: false, message: "Server error" });
