@@ -9,7 +9,7 @@ import activityRouter from "./routes/activities.js";
 
 dotenv.config();
 
-const MONGO_URL = process.env.MONGO_URL;
+const PORT = process.env.PORT || 5000;
 
 const app = express();
 app.use(cors());
@@ -20,7 +20,13 @@ app.use("/api/expense", expenseRouter);
 app.use("/api/balance", incomeRouter);
 app.use("/api/activity", activityRouter);
 
-app.listen(MONGO_URL, () => {
-  connectToDb();
-  console.log(`Server Up! Running on port ${MONGO_URL}`);
-});
+// ✅ Wait until DB is connected before starting the server
+connectToDb()
+  .then(() => {
+    app.listen(PORT, () => {
+      console.log(`✅ Server connected to DB and running on port ${PORT}`);
+    });
+  })
+  .catch((err) => {
+    console.error("❌ Failed to connect to database:", err);
+  });
