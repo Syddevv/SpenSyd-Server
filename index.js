@@ -5,6 +5,7 @@ import dotenv from "dotenv";
 import authRouter from "./routes/authRoutes.js";
 import expenseRouter from "./routes/expensesRoutes.js";
 import incomeRouter from "./routes/incomesRoutes.js";
+import activityRouter from "./routes/activities.js";
 
 dotenv.config();
 
@@ -17,6 +18,7 @@ app.use(express.json());
 app.use("/api/auth", authRouter);
 app.use("/api/expense", expenseRouter);
 app.use("/api/balance", incomeRouter);
+app.use("/api/activity", activityRouter);
 
 app.listen(PORT, () => {
   connectToDb();
