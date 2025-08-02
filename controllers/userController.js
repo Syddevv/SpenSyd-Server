@@ -145,17 +145,21 @@ export const loginUser = async (req, res) => {
   try {
     const { identifier, password } = req.body;
 
+    console.log("📥 Login request received:", identifier);
+
     const user = await User.findOne({
       $or: [{ email: identifier }, { username: identifier }],
     });
 
     if (!user) {
+      console.log("❌ User not found");
       return res
         .status(400)
         .json({ success: false, message: "User does not exist" });
     }
 
     if (!user.isVerified) {
+      console.log("⚠️ User not verified");
       return res.status(401).json({
         success: false,
         message: "Please verify your email before logging in",
@@ -164,28 +168,34 @@ export const loginUser = async (req, res) => {
 
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
+      console.log("❌ Password does not match");
       return res
         .status(400)
         .json({ success: false, message: "Wrong Credentials" });
     }
 
-    const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET, {
+    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
       expiresIn: "1d",
     });
+
+    console.log("✅ Login successful:", user.email);
 
     return res.status(200).json({
       success: true,
       token,
       user: {
-        _id: user._id, // <-- change 'id' to '_id'
+        _id: user._id,
         username: user.username,
         email: user.email,
       },
     });
   } catch (error) {
-    return res
-      .status(500)
-      .json({ success: false, message: "Server error during login" });
+    console.error("🔥 Server error during login:", error.message);
+    return res.status(500).json({
+      success: false,
+      message: "Server error during login",
+      error: error.message,
+    });
   }
 };
 
