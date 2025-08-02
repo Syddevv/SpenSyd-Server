@@ -21,15 +21,23 @@ app.use("/api/expense", expenseRouter);
 app.use("/api/balance", incomeRouter);
 app.use("/api/activity", activityRouter);
 
-// Root route (optional for Render health check)
+// Root route (for Render health check)
 app.get("/", (req, res) => {
   res.send("SpenSyd API is running ✅");
 });
 
-// Correct port binding for Render
+// Start server only AFTER DB is connected
 const PORT = process.env.PORT || 5000;
 
-app.listen(PORT, async () => {
-  await connectToDb();
-  console.log(`🚀 Server running on port ${PORT}`);
-});
+connectToDb()
+  .then(() => {
+    app.listen(PORT, () => {
+      console.log(`🚀 Server running on port ${PORT}`);
+    });
+  })
+  .catch((error) => {
+    console.error(
+      "❌ Failed to connect to DB. Server not started.",
+      error.message
+    );
+  });
