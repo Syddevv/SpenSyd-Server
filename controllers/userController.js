@@ -174,6 +174,10 @@ export const loginUser = async (req, res) => {
         .json({ success: false, message: "Wrong Credentials" });
     }
 
+    if (!process.env.JWT_SECRET) {
+      console.error("❌ JWT_SECRET is missing from environment variables");
+    }
+
     const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
       expiresIn: "1d",
     });
