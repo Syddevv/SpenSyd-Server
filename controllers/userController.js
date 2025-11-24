@@ -77,16 +77,6 @@ export const loginUser = async (req, res) => {
         .status(400)
         .json({ success: false, message: "User does not exist" });
     }
-
-    // Optional: You can keep this check if you plan to add verification later,
-    // but since we set isVerified: true on register, it will pass.
-    if (!user.isVerified) {
-      return res.status(401).json({
-        success: false,
-        message: "Please verify your email before logging in",
-      });
-    }
-
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
       return res
