@@ -216,3 +216,57 @@ export const changePassword = async (req, res) => {
     });
   }
 };
+
+export const changeEmail = async (req, res) => {
+  // 1. Extract 'newEmail' (matching the frontend), not 'email'
+  const { newEmail } = req.body;
+  const userId = req.user._id;
+
+  try {
+    // 2. Validate 'newEmail'
+    if (!newEmail) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Please provide an email address." });
+    }
+
+    // 3. Check if 'newEmail' is already taken
+    const emailExists = await User.findOne({ email: newEmail });
+    if (emailExists && emailExists._id.toString() !== userId.toString()) {
+      return res.status(400).json({
+        success: false,
+        message: "This email is already associated with another account.",
+      });
+    }
+
+    const user = await User.findById(userId);
+
+    if (user) {
+      // 4. Update the user's email
+      user.email = newEmail;
+
+      // OPTIONAL: If you want to force re-verification
+      user.isVerified = false;
+
+      const updatedUser = await user.save();
+
+      res.status(200).json({
+        success: true,
+        message: "Email updated successfully",
+        user: {
+          _id: updatedUser._id,
+          name: updatedUser.name,
+          email: updatedUser.email,
+        },
+      });
+    } else {
+      res.status(404).json({ success: false, message: "User not found" });
+    }
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({
+      success: false,
+      message: "Server Error: Unable to update email",
+    });
+  }
+};
