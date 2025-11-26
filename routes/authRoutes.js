@@ -7,6 +7,7 @@ import {
   getUserProfile,
   changePassword,
   changeEmail,
+  resetUserData,
 } from "../controllers/userController.js";
 import upload from "../middlewares/multer.js";
 import { verifyToken, protect } from "../middlewares/middleware.js";
@@ -35,5 +36,8 @@ router.put("/change-password", protect, changePassword);
 
 // ==================== EMAIL ROUTES ====================
 router.put("/change-email/direct", protect, changeEmail);
+
+// ==================== DATA RESET ROUTES ====================
+router.post("/reset-data", protect, resetUserData);
 
 export default router;

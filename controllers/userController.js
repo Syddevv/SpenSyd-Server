@@ -260,3 +260,39 @@ export const changeEmail = async (req, res) => {
     });
   }
 };
+
+export const resetUserData = async (req, res) => {
+  try {
+    const { type } = req.body; // 'expenses', 'incomes', 'all'
+    const userId = req.user.id || req.user._id;
+
+    if (!type) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Reset type is required" });
+    }
+
+    if (type === "expenses") {
+      await ExpenseModel.deleteMany({ userId });
+      await ActivityModel.deleteMany({ userId, type: "expense" });
+    } else if (type === "incomes") {
+      await IncomeModel.deleteMany({ userId });
+      await ActivityModel.deleteMany({ userId, type: "income" });
+    } else if (type === "all") {
+      await ExpenseModel.deleteMany({ userId });
+      await IncomeModel.deleteMany({ userId });
+      await ActivityModel.deleteMany({ userId });
+    } else {
+      return res.status(400).json({ success: false, message: "Invalid type" });
+    }
+
+    return res
+      .status(200)
+      .json({ success: true, message: "Data reset successfully" });
+  } catch (error) {
+    console.error("Reset Data Error:", error);
+    return res
+      .status(500)
+      .json({ success: false, message: "Failed to reset data" });
+  }
+};
