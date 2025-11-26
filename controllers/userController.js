@@ -6,6 +6,11 @@ import User from "../models/User.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import dotenv from "dotenv";
+
+import ExpenseModel from "../models/Expenses.js";
+import IncomeModel from "../models/Incomes.js";
+import ActivityModel from "../models/Activities.js";
+
 dotenv.config();
 
 const storage = multer.diskStorage({
